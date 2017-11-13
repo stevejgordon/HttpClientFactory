@@ -80,8 +80,76 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 throw new ArgumentNullException(nameof(configureBuilder));
             }
-            
+
             builder.Services.Configure<HttpClientFactoryOptions>(builder.Name, options => options.HttpMessageHandlerBuilderActions.Add(configureBuilder));
+
+            return builder;
+        }
+
+        public static IHttpClientBuilder AddTypedClient<T>(this IHttpClientBuilder builder)
+            where T : class
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            builder.Services.AddTransient<T>(s =>
+            {
+                var httpClientFactory = s.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(builder.Name);
+
+                var typedClientFactory = s.GetRequiredService<ITypedHttpClientFactory>();
+                return typedClientFactory.CreateClient<T>(builder.Name, httpClient);
+            });
+
+            return builder;
+        }
+
+        public static IHttpClientBuilder AddTypedClient<T>(this IHttpClientBuilder builder, Func<HttpClient, T> factory)
+            where T : class
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (factory == null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+
+            builder.Services.AddTransient<T>(s =>
+            {
+                var httpClientFactory = s.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(builder.Name);
+
+                return factory(httpClient);
+            });
+
+            return builder;
+        }
+
+        public static IHttpClientBuilder AddTypedClient<T>(this IHttpClientBuilder builder, Func<HttpClient, IServiceProvider, T> factory)
+            where T : class
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (factory == null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+
+            builder.Services.AddTransient<T>(s =>
+            {
+                var httpClientFactory = s.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient(builder.Name);
+
+                return factory(httpClient, s);
+            });
 
             return builder;
         }

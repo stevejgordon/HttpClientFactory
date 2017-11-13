@@ -35,6 +35,11 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddSingleton<IHttpClientFactory, DefaultHttpClientFactory>();
 
             //
+            // Typed Clients
+            //
+            services.TryAddSingleton<ITypedHttpClientFactory, DefaultTypedHttpClientFactory>();
+
+            //
             // Misc infrastrure
             //
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHttpMessageHandlerBuilderFilter, LoggingHttpMessageHandlerBuilderFilter>());
