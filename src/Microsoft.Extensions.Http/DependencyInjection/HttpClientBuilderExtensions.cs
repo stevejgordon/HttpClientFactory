@@ -4,6 +4,7 @@
 using System;
 using System.Net.Http;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -18,7 +19,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="builder">The <see cref="IServiceCollection"/>.</param>
         /// <param name="configureClient">A delegate that is used to configure an <see cref="HttpClient"/>.</param>
         /// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
-        public static IHttpClientBuilder AddHttpClientOptions(this IHttpClientBuilder builder, Action<HttpClient> configureClient)
+        public static IHttpClientBuilder ConfigureHttpClient(this IHttpClientBuilder builder, Action<HttpClient> configureClient)
         {
             if (builder == null)
             {
@@ -61,6 +62,62 @@ namespace Microsoft.Extensions.DependencyInjection
             return builder;
         }
 
+        /// <summary>
+        /// Adds a delegate that will be used to create an additional message handler for a named <see cref="HttpClient"/>.
+        /// </summary>
+        /// <param name="builder">The <see cref="IHttpClientBuilder"/>.</param>
+        /// <param name="configureHandler">A delegate that is used to configure an <see cref="HttpMessageHandlerBuilder"/>.</param>
+        /// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
+        public static IHttpClientBuilder AddHttpMessageHandler(this IHttpClientBuilder builder, Func<IServiceProvider, DelegatingHandler> configureHandler)
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (configureHandler == null)
+            {
+                throw new ArgumentNullException(nameof(configureHandler));
+            }
+
+            builder.Services.AddTransient<IConfigureOptions<HttpClientFactoryOptions>>(services =>
+            {
+                return new ConfigureNamedOptions<HttpClientFactoryOptions>(builder.Name, (options) =>
+                {
+                    options.HttpMessageHandlerBuilderActions.Add(b => b.AdditionalHandlers.Add(configureHandler(services)));
+                });
+            });
+
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds a delegate that will be used to create an additional message handler for a named <see cref="HttpClient"/>.
+        /// </summary>
+        /// <param name="builder">The <see cref="IHttpClientBuilder"/>.</param>
+        /// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
+        /// <typeparam name="THandler">
+        /// The type of the <see cref="DelegatingHandler"/>. The handler type must be registered as a transient service.
+        /// </typeparam>
+        public static IHttpClientBuilder AddHttpMessageHandler<THandler>(this IHttpClientBuilder builder)
+            where THandler : DelegatingHandler
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            builder.Services.AddTransient<IConfigureOptions<HttpClientFactoryOptions>>(services =>
+            {
+                return new ConfigureNamedOptions<HttpClientFactoryOptions>(builder.Name, (options) =>
+                {
+                    options.HttpMessageHandlerBuilderActions.Add(b => b.AdditionalHandlers.Add(services.GetRequiredService<THandler>()));
+                });
+            });
+
+            return builder;
+        }
+
 
         /// <summary>
         /// Adds a delegate that will be used to configure message handlers using <see cref="HttpMessageHandlerBuilder"/> 
@@ -69,7 +126,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="builder">The <see cref="IHttpClientBuilder"/>.</param>
         /// <param name="configureBuilder">A delegate that is used to configure an <see cref="HttpMessageHandlerBuilder"/>.</param>
         /// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
-        public static IHttpClientBuilder AddHttpMessageHandlerBuilderOptions(this IHttpClientBuilder builder, Action<HttpMessageHandlerBuilder> configureBuilder)
+        public static IHttpClientBuilder ConfigureHttpMessageHandlerBuilder(this IHttpClientBuilder builder, Action<HttpMessageHandlerBuilder> configureBuilder)
         {
             if (builder == null)
             {

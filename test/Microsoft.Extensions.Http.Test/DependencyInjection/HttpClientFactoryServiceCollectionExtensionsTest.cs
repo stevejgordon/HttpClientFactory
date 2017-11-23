@@ -85,7 +85,7 @@ namespace Microsoft.Extensions.DependencyInjection
             HttpMessageHandlerBuilder builder = null;
 
             // Act1
-            serviceCollection.AddHttpClient("example.com").AddHttpMessageHandlerBuilderOptions(b =>
+            serviceCollection.AddHttpClient("example.com").ConfigureHttpMessageHandlerBuilder(b =>
             {
                 builder = b;
 
